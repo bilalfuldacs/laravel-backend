@@ -9,18 +9,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: testing
-        ports:
-          - 3306:3306
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -28,15 +18,19 @@ jobs:
           php-version: 8.3
 
       - name: Install Dependencies
+        working-directory: src
         run: composer install --no-interaction --prefer-dist
 
       - name: Prepare Laravel
+        working-directory: src
         run: |
           cp .env.example .env
           php artisan key:generate
 
-      - name: Run Lint (Syntax Check)
+      - name: Lint PHP
+        working-directory: src
         run: find app -type f -name "*.php" -exec php -l {} \;
 
       - name: Run Tests
+        working-directory: src
         run: php artisan test
