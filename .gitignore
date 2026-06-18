@@ -1,0 +1,41 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+auth.json
+
+# Laravel application dependencies and build output
+/src/vendor/
+/src/node_modules/
+/src/public/build/
+/src/public/hot
+/src/public/storage
+/src/storage/*.key
+/src/storage/pail/
+
+# Laravel caches and logs
+/src/.phpunit.cache/
+/src/.phpunit.result.cache
+/src/bootstrap/cache/*.php
+!/src/bootstrap/cache/.gitignore
+/src/storage/logs/*.log
+/src/storage/framework/cache/data/*
+!/src/storage/framework/cache/data/.gitignore
+/src/storage/framework/sessions/*
+!/src/storage/framework/sessions/.gitignore
+/src/storage/framework/testing/*
+!/src/storage/framework/testing/.gitignore
+/src/storage/framework/views/*
+!/src/storage/framework/views/.gitignore
+
+# Local tooling
+/.codex/
+_ide_helper.php
+.phpactor.json
