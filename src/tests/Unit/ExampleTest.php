@@ -3,7 +3,8 @@
 namespace Tests\Unit;
 
 use App\Models\User;
-use PHPUnit\Framework\TestCase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
@@ -18,7 +19,8 @@ class ExampleTest extends TestCase
 
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
-        $this->assertSame('secret', $user->password);
+        $this->assertNotSame('secret', $user->password);
+        $this->assertTrue(Hash::check('secret', $user->password));
         $this->assertNull($user->remember_token);
     }
 
