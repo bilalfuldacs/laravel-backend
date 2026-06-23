@@ -1,10 +1,27 @@
-FROM php:8.4-fpm
+FROM php:8.4-fpm-bookworm
 
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        unzip \
+        libicu-dev \
+        libonig-dev \
+        libzip-dev \
+    && docker-php-ext-install -j"$(nproc)" \
+        bcmath \
+        intl \
+        mbstring \
+        opcache \
+        pdo_mysql \
+        zip \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install pdo_mysql mbstring
-
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
+
+CMD ["php-fpm"]
