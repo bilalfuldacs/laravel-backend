@@ -1,0 +1,122 @@
+name: Feature CI
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+  pull_request:
+    branches:
+      - staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feature-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      COMPOSE_FILE: Docker-Compose.yml
+      PHP_SERVICE: app
+      MYSQL_SERVICE: mysql
+      REDIS_SERVICE: redis
+      COMPOSE_PROJECT_NAME: feature_ci_${{ github.run_id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Laravel environment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f src/.env.ci ]]; then
+            cp src/.env.ci src/.env
+          elif [[ -f src/.env.example ]]; then
+            cp src/.env.example src/.env
+          else
+            echo "Missing src/.env.ci or src/.env.example"
+            exit 1
+          fi
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build Docker images
+        run: docker compose build --pull
+
+      - name: Start PHP, MySQL and Redis
+        run: |
+          docker compose up \
+            --detach \
+            --wait \
+            --wait-timeout 90 \
+            "$PHP_SERVICE" \
+            "$MYSQL_SERVICE" \
+            "$REDIS_SERVICE"
+
+      - name: Prepare application inside container
+        run: |
+          docker compose exec -T "$PHP_SERVICE" sh -lc '
+            chown -R www-data:www-data storage bootstrap/cache
+            chmod -R ug+rwx storage bootstrap/cache
+            php artisan key:generate --force
+          '
+
+      - name: Validate composer.json
+        run: |
+          docker compose exec -T "$PHP_SERVICE" \
+            composer validate --strict --no-interaction
+
+      - name: Install PHP dependencies
+        run: |
+          docker compose exec -T "$PHP_SERVICE" \
+            composer install \
+              --prefer-dist \
+              --no-interaction \
+              --no-progress
+
+      - name: Check PHP syntax
+        run: |
+          docker compose exec -T "$PHP_SERVICE" sh -lc '
+            find app bootstrap config database routes tests \
+              -type f -name "*.php" \
+              -exec php -l {} \;
+          '
+
+      - name: Run code linting
+        run: |
+          docker compose exec -T "$PHP_SERVICE" \
+            composer run lint
+
+      - name: Run automated tests
+        run: |
+          docker compose exec -T --user www-data "$PHP_SERVICE" \
+            composer run test
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies and build assets
+        working-directory: src
+        run: |
+          npm install --ignore-scripts
+          npm run build
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down --volumes --remove-orphans
