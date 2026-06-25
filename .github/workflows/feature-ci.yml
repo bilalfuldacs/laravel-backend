@@ -63,12 +63,11 @@ jobs:
             "$MYSQL_SERVICE" \
             "$REDIS_SERVICE"
 
-      - name: Prepare application inside container
+      - name: Fix Laravel storage permissions
         run: |
           docker compose exec -T "$PHP_SERVICE" sh -lc '
             chown -R www-data:www-data storage bootstrap/cache
             chmod -R ug+rwx storage bootstrap/cache
-            php artisan key:generate --force
           '
 
       - name: Validate composer.json
@@ -83,6 +82,14 @@ jobs:
               --prefer-dist \
               --no-interaction \
               --no-progress
+
+      - name: Prepare Laravel application
+        run: |
+          docker compose exec -T "$PHP_SERVICE" sh -lc '
+            chown -R www-data:www-data storage bootstrap/cache vendor
+            chmod -R ug+rwx storage bootstrap/cache
+            php artisan key:generate --force
+          '
 
       - name: Check PHP syntax
         run: |
