@@ -1,0 +1,32 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /var/www/myapp
+
+            echo "Pulling latest code..."
+            git pull origin staging
+
+            echo "Rebuilding containers..."
+            docker compose down
+            docker compose up -d --build
+
+            echo "Running Laravel commands..."
+            docker compose exec -T app php artisan migrate --force
+            docker compose exec -T app php artisan config:clear
+            docker compose exec -T app php artisan cache:clear
