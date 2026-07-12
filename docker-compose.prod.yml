@@ -20,7 +20,6 @@ services:
     depends_on:
       - app
 
-
   redis:
     image: redis:alpine
     ports:
