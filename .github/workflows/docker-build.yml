@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: Build and Push Docker Image
 
 on:
   push:
@@ -6,34 +6,40 @@ on:
       - staging
       - main
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
+  packages: write
 
-    permissions:
-      contents: read
-      packages: write
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
 
     steps:
 
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
 
-    - name: Login to GHCR
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
 
-    - name: Build image
-      run: |
-        docker build \
-        -t ghcr.io/${{ github.repository }}/laravel-backend:${{ github.sha }} .
+      - name: Set image name
+        run: |
+          echo "IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/laravel-backend" >> $GITHUB_ENV
 
 
-    - name: Push image
-      run: |
-        docker push ghcr.io/${{ github.repository }}/laravel-backend:${{ github.sha }}
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f docker/php/Dockerfile \
+            -t $IMAGE_NAME:${{ github.sha }} .
+
+
+      - name: Push Docker image
+        run: |
+          docker push $IMAGE_NAME:${{ github.sha }}
