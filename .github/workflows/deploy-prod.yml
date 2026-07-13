@@ -10,12 +10,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to production
+      - name: Deploy production EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PROD_EC2_HOST }}
-          username: ${{ secrets.PROD_EC2_USER }}
+          username: ec2-user
           key: ${{ secrets.PROD_EC2_SSH_KEY }}
+
           script: |
-            cd /var/www/myapp/laravel-backend
-            ./deploy.sh
+
+            cd /var/www/myapp
+
+
+            echo "Logging into GHCR..."
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              -u ${{ github.repository_owner }} \
+              --password-stdin
+
+
+            echo "Pulling production image..."
+
+            docker pull ghcr.io/bilalfuldacs/laravel-backend:main
+
+
+            echo "Restarting production containers..."
+
+            docker compose -f docker-compose.prod.yml down
+
+            docker compose -f docker-compose.prod.yml up -d
+
+
+            sleep 30
+
+
+            echo "Running production migrations..."
+
+            docker compose exec -T app php artisan migrate --force
+
+            docker compose exec -T app php artisan config:clear
+
+            docker compose exec -T app php artisan cache:clear
