@@ -3,8 +3,7 @@ version: "3.9"
 services:
 
   app:
-    build:
-      context: ./docker/php
+    image: ghcr.io/bilalfuldacs/laravel-backend:main
     container_name: laravel_app
     working_dir: /var/www
     volumes:
