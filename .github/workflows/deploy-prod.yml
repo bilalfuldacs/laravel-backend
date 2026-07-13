@@ -19,7 +19,7 @@ jobs:
 
           script: |
 
-            cd /var/www/myapp
+            cd /var/www/myapp/laravel-backend
 
 
             echo "Logging into GHCR..."
