@@ -1,24 +1,26 @@
-name: Deploy Staging
+name: Deploy Production
 
 on:
   push:
     branches:
-      - staging
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to staging EC2
+      - name: Deploy production EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.PROD_EC2_HOST }}
           username: ec2-user
-          key: ${{ secrets.STAGING }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+
           script: |
 
             cd /var/www/myapp/laravel-backend
+
 
             echo "Logging into GHCR..."
 
@@ -27,22 +29,22 @@ jobs:
               --password-stdin
 
 
-            echo "Pulling latest staging image..."
+            echo "Pulling production image..."
 
-            docker pull ghcr.io/bilalfuldacs/laravel-backend:staging
+            docker pull ghcr.io/bilalfuldacs/laravel-backend:main
 
 
-            echo "Restarting containers..."
+            echo "Restarting production containers..."
 
             docker compose -f docker-compose.prod.yml down
 
             docker compose -f docker-compose.prod.yml up -d
 
 
-            sleep 20
+            sleep 30
 
 
-            echo "Running Laravel migrations..."
+            echo "Running production migrations..."
 
             docker compose exec -T app php artisan migrate --force
 
